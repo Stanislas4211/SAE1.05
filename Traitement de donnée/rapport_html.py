@@ -1,5 +1,146 @@
+#!/usr/bin/env python3
 # rapport_html.py
+import markdown
 
+    # 1 --  Façonnage du texte Markdown
+def generer_markdown_rapport(
+    table,
+    stats,
+    nom_source,
+    img_ip_src,
+    img_ip_dst,
+    img_ports,
+    img_lengths,
+    img_proto,
+    img_requetes,
+    img_ssh_sessions,
+    img_ssh_volume,
+    img_ssh_flags,
+    img_scan_ports,
+    img_scan_syn_ratio,
+    img_scan_intervalles,
+    img_ddos_ratio,
+    img_ddos_incomplets_temps,
+    img_ddos_incomplets_service,
+    img_sql_hotes,
+    img_sql_sources,
+):
+    
+    #Contenu de la page
+    md = f"""# Analyse des traces réseau
+
+    
+## Résumé du fichier
+
+- **Fichier analysé** : `{nom_source}`
+- **Nombre total de paquets analysés** : {stats['nb_total']}
+- **Volume total** : {stats['octets_total']} octets
+
+
+## Vue synthétique du trafic
+
+### Top IP source
+
+![Top IP source]({img_ip_src})  
+_Identifie les machines qui émettent le plus de requêtes._
+
+### Top IP destination
+
+![Top IP destination]({img_ip_dst})  
+_Montre quelles machines reçoivent le plus de trafic._
+
+### 10 ports les plus utilisés
+
+![Ports les plus utilisés]({img_ports})  
+_Permet de voir les services les plus sollicités._
+
+### Distribution de la longueur des paquets
+
+![Longueur des paquets]({img_lengths})  
+_Aide à distinguer petits paquets (scans) et flux volumineux._
+
+### Nombre de requêtes par IP source
+
+![Nombre de requêtes]({img_requetes})  
+_Résume le nombre total de requêtes par IP source._
+
+### Répartition des protocoles
+
+![Répartition des protocoles]({img_proto})  
+_Indique si le trafic est conforme à l’usage prévu._
+
+
+## Activité SSH
+
+### Sessions SSH approximées
+
+![Sessions SSH]({img_ssh_sessions})  
+_Nombre de paquets par couple client → serveur._
+_Permet de voir si une session envoie beaucoup plus de paquets que les autres_
+
+### Volume échangé par session SSH
+
+![Volume SSH par session]({img_ssh_volume})  
+_Compare les octets client → serveur et serveur → client._
+
+### Répartition des flags TCP (SSH)
+
+![Flags SSH]({img_ssh_flags})  
+_Permet de repérer des terminaisons brutales ou anormales._
+
+
+## Scan de ports par IP source
+
+### Ports distincts contactés en SYN
+
+![Ports distincts en SYN]({img_scan_ports})  
+_Une IP qui envoie des SYN vers beaucoup de ports ressemble fortement à un scan de ports ou à un outil de découverte de services._
+
+### Taux de SYN sans ACK
+
+![Taux de SYN sans ACK]({img_scan_syn_ratio})  
+_Un taux proche de 1 est typique de scans furtifs (envoie un SYN sur plein de ports, ne répond pas à l’ACK éventuel, et n’établit jamais de vraie connexion)._
+
+### Intervalles entre SYN successifs
+
+![Intervalles entre SYN]({img_scan_intervalles})  
+_Un rythme régulier rapide est typique d’un outil automatique._
+
+
+## Connexions incomplètes et risques de DDoS
+
+### Ratio SYN / SYN‑ACK par destination
+
+![Ratio SYN / SYN-ACK]({img_ddos_ratio})  
+_Un ratio élevé peut révéler un début de flood._
+
+### Connexions incomplètes par minute
+
+![Connexions incomplètes par minute]({img_ddos_incomplets_temps})  
+_Permet de repérer des pics soudains._
+
+### Connexions incomplètes par service
+
+![Connexions incomplètes par service]({img_ddos_incomplets_service})  
+_Identifie les services les plus touchés._
+
+
+## Requêtes SQL suspectes
+
+### Hôtes / URLs ciblés
+
+![Hôtes ciblés par SQL]({img_sql_hotes})  
+_Liste les hôtes apparaissant dans des motifs d’injection SQL._
+
+### Requêtes SQL suspectes par IP source
+
+![Sources SQL suspectes]({img_sql_sources})  
+_Révèle les machines à l’origine de requêtes suspectes._
+"""
+    return md  #Renvoie la chaîne Markdown complète contenant tout le rapport.
+
+  #Fonction chargée de produire le fichier HTML final.
+    #Elle reçoit les mêmes informations que generer_markdown_rapport plus le chemin_html (où écrire le fichier HTML généré).
 def generer_html(
     table,
     stats,
@@ -14,165 +155,107 @@ def generer_html(
     img_ssh_sessions,
     img_ssh_volume,
     img_ssh_flags,
+    img_scan_ports,
+    img_scan_syn_ratio,
+    img_scan_intervalles,
+    img_ddos_ratio,
+    img_ddos_incomplets_temps,
+    img_ddos_incompletes_service,
+    img_sql_hotes,
+    img_sql_sources,
 ):
-    html = f"""
-<!DOCTYPE html>
-<html lang="fr" data-bs-theme="dark">
+
+  #On récupère la fonction réalisée juste au-dessus pour récupérer dans md_text la version MarkDown du rapport, que l'on peut convertir en HTML (Voir la suite du code)
+    md_text = generer_markdown_rapport(
+        table,
+        stats,
+        nom_source,
+        img_ip_src,
+        img_ip_dst,
+        img_ports,
+        img_lengths,
+        img_proto,
+        img_requetes,
+        img_ssh_sessions,
+        img_ssh_volume,
+        img_ssh_flags,
+        img_scan_ports,
+        img_scan_syn_ratio,
+        img_scan_intervalles,
+        img_ddos_ratio,
+        img_ddos_incomplets_temps,
+        img_ddos_incompletes_service,
+        img_sql_hotes,
+        img_sql_sources,
+    )
+
+    # 2 -- Conversion Markdown -> HTML
+    html_body = markdown.markdown(md_text)
+
+    # 3 -- Encapsulement dans une page HTML
+    # HTML avec Bootswatch + mise en page
+    html_page = f"""<!DOCTYPE html>
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <title>Analyse réseau</title>
-  <!-- Thème Bootswatch Cyborg -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet"
-        href="https://bootswatch.com/5/cyborg/bootstrap.min.css">
+        href="https://bootswatch.com/5/journal/bootstrap.min.css">
+  <style>
+    body {{
+      padding-top: 70px;
+    }}
+    .markdown-body h1 {{
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }}
+    .markdown-body h2 {{
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: .4rem;
+    }}
+    .markdown-body h3 {{
+      margin-top: 1.5rem;
+      margin-bottom: .8rem;
+    }}
+    .markdown-body img {{
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto 0.5rem auto;
+    }}
+    .markdown-body em {{
+      display: block;
+      text-align: center;
+      color: #6c757d;
+      margin-bottom: 1rem;
+    }}
+  </style>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-  <div class="container">
-    <span class="navbar-brand mb-0 h1">Analyse des traces réseau</span>
-  </div>
-</nav>
-
-<div class="container mb-5">
-
-  <!-- Card axes d'analyse -->
-  <div class="card mb-4">
-    <div class="card-header">
-      Axes d'analyse recommandés
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">Analyse des traces réseau</span>
     </div>
-    <div class="card-body">
-      <p class="card-text">
-        Ce rapport permet de visualiser rapidement les IP les plus actives, les ports les plus sollicités,
-        la longueur des paquets et la répartition des protocoles pour identifier des comportements anormaux.
-      </p>
-      <p class="card-text">
-        Les informations ci-dessous proviennent de l’analyse du résultat de la commande <code>tcpdump</code>,
-        outil de capture de paquets largement utilisé pour le diagnostic réseau et l’analyse de sécurité.
-      </p>
-    </div>
-  </div>
+  </nav>
 
-  <!-- Résumé -->
-  <div class="card mb-4">
-    <div class="card-header">
-      Résumé du fichier
-    </div>
-    <div class="card-body">
-      <p class="card-text"><strong>Fichier analysé :</strong> {nom_source}</p>
-      <p class="card-text"><strong>Nombre total de paquets analysés :</strong> {stats['nb_total']}</p>
-      <p class="card-text"><strong>Volume total :</strong> {stats['octets_total']} octets</p>
-    </div>
-  </div>
-
-  <!-- Card : Vue synthétique du trafic -->
-  <div class="card mb-4">
-    <div class="card-header">
-      Vue synthétique du trafic
-    </div>
-    <div class="card-body">
-      <div class="row g-4">
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Top IP source</h5>
-          <img src="{img_ip_src}" class="img-fluid rounded mb-2" alt="Top IP source">
-          <p class="small text-muted">
-            Ce graphique met en évidence les machines qui émettent le plus de requêtes
-            et permet de repérer rapidement une IP potentiellement à l’origine d’un scan ou d’un débit inhabituel.
-          </p>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Top IP destination</h5>
-          <img src="{img_ip_dst}" class="img-fluid rounded mb-2" alt="Top IP destination">
-          <p class="small text-muted">
-            Ce graphique montre quelles machines reçoivent le plus de trafic et peut indiquer
-            une cible de scan, de DDoS ou un serveur fortement sollicité.
-          </p>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">10 ports les plus utilisés</h5>
-          <img src="{img_ports}" class="img-fluid rounded mb-2" alt="Ports les plus utilisés">
-          <p class="small text-muted">
-            La répartition des ports aide à identifier les services les plus exposés (HTTP, HTTPS, SSH, etc.)
-            et à repérer d’éventuels scans de ports sur des services inattendus.
-          </p>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Distribution de la longueur des paquets</h5>
-          <img src="{img_lengths}" class="img-fluid rounded mb-2" alt="Longueur des paquets">
-          <p class="small text-muted">
-            L’analyse de la taille des paquets permet de voir si le trafic est principalement composé
-            de petits paquets (scans, SYN) ou de flux plus volumineux (transferts de données).
-          </p>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Nombre de requêtes (par IP source)</h5>
-          <img src="{img_requetes}" class="img-fluid rounded mb-2" alt="Nombre de requêtes">
-          <p class="small text-muted">
-            Ce graphique résume le nombre total de requêtes par IP source et sert à confirmer ou infirmer
-            le rôle d’une machine dans une activité suspecte ou anormalement bavarde.
-          </p>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Répartition des protocoles</h5>
-          <img src="{img_proto}" class="img-fluid rounded mb-2" alt="Répartition des protocoles">
-          <p class="small text-muted">
-            La répartition des protocoles indique si le trafic est conforme à l’usage prévu
-            (web, DNS, SSH) ou s’il contient une proportion inhabituelle de certains services.
-          </p>
-        </div>
-
+  <main class="container my-4">
+    <div class="card shadow-sm">
+      <div class="card-body markdown-body">
+        {html_body}
       </div>
     </div>
-  </div>
+  </main>
 
-  <!-- Card : Activité SSH -->
-  <div class="card mb-4">
-    <div class="card-header">
-      Activité SSH
-    </div>
-    <div class="card-body">
-      <div class="row g-4">
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Sessions SSH approximées</h5>
-          <img src="{img_ssh_sessions}" class="img-fluid rounded mb-2" alt="Sessions SSH">
-          <p class="small text-muted">
-            Ce graphique représente, pour chaque couple client → serveur en SSH, le nombre de paquets
-            observés, ce qui donne une idée du nombre et de l’intensité des sessions actives.
-          </p>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Volume échangé par session SSH</h5>
-          <img src="{img_ssh_volume}" class="img-fluid rounded mb-2" alt="Volume SSH par session">
-          <p class="small text-muted">
-            La comparaison des octets client → serveur et serveur → client par session permet
-            de repérer des connexions déséquilibrées, par exemple un débit anormal côté serveur.
-          </p>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <h5 class="text-center mb-2">Répartition des flags TCP (SSH)</h5>
-          <img src="{img_ssh_flags}" class="img-fluid rounded mb-2" alt="Flags SSH">
-          <p class="small text-muted">
-            La répartition des flags (SYN, FIN, RST, PSH, ACK…) sur le trafic SSH aide à repérer
-            des terminaisons brutales (beaucoup de RST) ou des sessions qui poussent surtout des données.
-          </p>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-</div> <!-- /.container -->
-
+  <footer class="text-center text-muted py-3">
+    <small>SAÉ1.5 - Traitement des données réseau</small>
+  </footer>
 </body>
 </html>
 """
 
+    # 4) Écrire le fichier HTML final
     with open(chemin_html, "w", encoding="utf-8") as f:
-        f.write(html)
+        f.write(html_page)
