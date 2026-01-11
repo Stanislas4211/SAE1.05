@@ -82,6 +82,7 @@ _Permet de voir si une session envoie beaucoup plus de paquets que les autres_
 
 ![Volume SSH par session]({img_ssh_volume})  
 _Compare les octets client → serveur et serveur → client._
+_Permet d’identifier un déséquilibre fort, ce qui peut indiquer une surcharge, un téléchargement massif, ou une session bloquée qui n’envoie presque rien dans un sens._
 
 ### Répartition des flags TCP (SSH)
 
@@ -112,12 +113,13 @@ _Un rythme régulier rapide est typique d’un outil automatique._
 ### Ratio SYN / SYN‑ACK par destination
 
 ![Ratio SYN / SYN-ACK]({img_ddos_ratio})  
-_Un ratio élevé peut révéler un début de flood._
+_Un ratio élevé peut révéler un début de flood ou un serveur saturé qui ne répond plus correctement._
 
 ### Connexions incomplètes par minute
 
 ![Connexions incomplètes par minute]({img_ddos_incomplets_temps})  
 _Permet de repérer des pics soudains._
+_Un point avec un nombre très élevé indique un pic soudain de connexions qui n’aboutissent pas, ce qui peut correspondre à un scan massif, un bot, ou un service qui répond mal._
 
 ### Connexions incomplètes par service
 

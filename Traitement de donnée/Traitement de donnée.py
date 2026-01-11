@@ -179,7 +179,7 @@ def filtrer_ssh(table):
             ssh_pkts.append(e)
     return ssh_pkts
 
-#regroupe les paquets SSH par couple src→dst et calcule
+#Cette fonction calcule des statistiques de trafic par session SSH (couple client ↔ serveur), en comptant les paquets et octets échangés côté client et côté serveur.
 def stats_ssh_sessions(table):
     sessions = defaultdict(lambda: {
         "pkts": 0,
@@ -202,7 +202,7 @@ def stats_ssh_sessions(table):
 
     return sessions
 
-
+#Ce programme compte combien de fois chaque flag TCP apparaît dans les paquets SSH et renvoie ces statistiques sous forme de compteur.
 def stats_flags_ssh(table):
     ssh_pkts = filtrer_ssh(table)
     counts = Counter()
@@ -218,11 +218,13 @@ def stats_flags_ssh(table):
 #    Calcul des statistiques pour les graphes
 #      Scan de ports (SYN)
 # =======================
+
+#Cette fonction teste si un paquet est un SYN “pur” (début de connexion TCP) et non un SYN‑ACK.
 def est_syn(e):
     f = e["flags"]
-    return "S" in f and "A" not in f  # SYN sans ACK
+    return "S" in f and "A" not in f 
 
-
+#Cette fonction calcule, pour chaque IP source, combien de ports de destination différents elle a contactés avec des paquets SYN « purs », puis renvoie le top des IP les plus “scanneuses”.
 def stats_ports_distincts_par_source(table, top_n=10):
     ports_par_src = defaultdict(set)
     for e in table:
@@ -234,7 +236,7 @@ def stats_ports_distincts_par_source(table, top_n=10):
         counts = [("Aucune IP", 0)]
     return counts[:top_n]
 
-
+#Cette fonction calcule, pour chaque IP source, le taux de paquets SYN qui ne sont pas suivis d’ACK, puis renvoie le top des IP les plus suspectes
 def stats_syn_sans_ack_par_source(table, top_n=10):
     syn_counts = Counter()
     ack_counts = Counter()
@@ -261,13 +263,13 @@ def stats_syn_sans_ack_par_source(table, top_n=10):
         ratios = [("Aucune IP", 0.0)]
     return ratios[:top_n]
 
-
+#Cette fonction convertit une heure au format "HH:MM:SS" en nombre de secondes écoulées depuis 00:00:00
 def parse_time(hhmmss):
     h, m, s = hhmmss.split(":")
     s = float(s)
     return int(h) * 3600 + int(m) * 60 + s
 
-
+#Cette fonction calcule les intervalles de temps entre paquets SYN successifs pour les sources les plus actives, afin d’analyser le rythme des scans / connexions
 def stats_intervalles_syn_par_source(table, top_n_sources=3):
     syn_par_src = defaultdict(list)
     for e in table:
@@ -681,6 +683,7 @@ def generer_graphiques_sql(lignes_brutes, output_dir):
 #    Génération du rapport et GUI (Interface Graphique Utilisateur)
 # =======================
 
+#affiche dans la zone de texte Tkinter un petit rapport
 def afficher_resultat(texte_resultat, chemin_csv, chemin_html, stats, output_dir):
     texte_resultat.config(state="normal")
     texte_resultat.delete("1.0", tk.END)
@@ -694,7 +697,7 @@ def afficher_resultat(texte_resultat, chemin_csv, chemin_html, stats, output_dir
     )
     texte_resultat.config(state="disabled")
 
-
+#prend un fichier de capture réseau choisi par l’utilisateur, lance toute l’analyse, génère les fichiers de sortie puis affiche et ouvre le rapport
 def traiter_fichier(texte_resultat):
     chemin = choisir_fichier_reseau()
     if not chemin:
@@ -741,7 +744,7 @@ def traiter_fichier(texte_resultat):
     # Ouvrir le rapport HTML dans le navigateur par défaut
     webbrowser.open_new_tab(chemin_html)
 
-
+# lance l’interface graphique Tkinter de l'outil d’analyse réseau : une petite fenêtre avec un bouton pour choisir un fichier de capture et un autre pour quitter.
 def main():
     global fenetre
     fenetre = tk.Tk()

@@ -77,30 +77,33 @@
 <h2>Activité SSH</h2>
 <h3>Sessions SSH approximées</h3>
 <p><img alt="Sessions SSH" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ssh_sessions_nb.png" /><br />
-<em>Nombre de paquets par couple client → serveur.</em></p>
+<em>Nombre de paquets par couple client → serveur.</em>
+<em>Permet de voir si une session envoie beaucoup plus de paquets que les autres</em></p>
 <h3>Volume échangé par session SSH</h3>
 <p><img alt="Volume SSH par session" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ssh_sessions_volume.png" /><br />
-<em>Compare les octets client → serveur et serveur → client.</em></p>
+<em>Compare les octets client → serveur et serveur → client.</em>
+<em>Permet d’identifier un déséquilibre fort, ce qui peut indiquer une surcharge, un téléchargement massif, ou une session bloquée qui n’envoie presque rien dans un sens.</em></p>
 <h3>Répartition des flags TCP (SSH)</h3>
 <p><img alt="Flags SSH" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ssh_flags.png" /><br />
 <em>Permet de repérer des terminaisons brutales ou anormales.</em></p>
 <h2>Scan de ports par IP source</h2>
 <h3>Ports distincts contactés en SYN</h3>
 <p><img alt="Ports distincts en SYN" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\scan_ports_distincts.png" /><br />
-<em>Un grand nombre de ports peut indiquer un scan.</em></p>
+<em>Une IP qui envoie des SYN vers beaucoup de ports ressemble fortement à un scan de ports ou à un outil de découverte de services.</em></p>
 <h3>Taux de SYN sans ACK</h3>
 <p><img alt="Taux de SYN sans ACK" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\scan_syn_sans_ack.png" /><br />
-<em>Typique des scans furtifs.</em></p>
+<em>Un taux proche de 1 est typique de scans furtifs (envoie un SYN sur plein de ports, ne répond pas à l’ACK éventuel, et n’établit jamais de vraie connexion).</em></p>
 <h3>Intervalles entre SYN successifs</h3>
 <p><img alt="Intervalles entre SYN" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\scan_intervalles_syn.png" /><br />
 <em>Un rythme régulier rapide est typique d’un outil automatique.</em></p>
 <h2>Connexions incomplètes et risques de DDoS</h2>
 <h3>Ratio SYN / SYN‑ACK par destination</h3>
 <p><img alt="Ratio SYN / SYN-ACK" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ddos_ratio_syn_synack.png" /><br />
-<em>Un ratio élevé peut révéler un début de flood.</em></p>
+<em>Un ratio élevé peut révéler un début de flood ou un serveur saturé qui ne répond plus correctement.</em></p>
 <h3>Connexions incomplètes par minute</h3>
 <p><img alt="Connexions incomplètes par minute" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ddos_incomplets_par_minute.png" /><br />
-<em>Permet de repérer des pics soudains.</em></p>
+<em>Permet de repérer des pics soudains.</em>
+<em>Un point avec un nombre très élevé indique un pic soudain de connexions qui n’aboutissent pas, ce qui peut correspondre à un scan massif, un bot, ou un service qui répond mal.</em></p>
 <h3>Connexions incomplètes par service</h3>
 <p><img alt="Connexions incomplètes par service" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ddos_incompletes_par_service.png" /><br />
 <em>Identifie les services les plus touchés.</em></p>
