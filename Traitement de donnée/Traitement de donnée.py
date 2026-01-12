@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# Traitement de donnée.py
-
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import re
@@ -13,43 +10,46 @@ import matplotlib.pyplot as plt
 from rapport_html import generer_html
 
 
-# =======================
-#    Répertoire de sortie
-# =======================
+# ============================================================
+# OUTILS GÉNÉRAUX (fichiers, temps, clés)
+# ============================================================
 
+# Retourne le chemin du répertoire de sortie (créé s'il n'existe pas)
 def get_output_dir():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     out_dir = os.path.join(base_dir, "Fichier renvoyé")
     os.makedirs(out_dir, exist_ok=True)
     return out_dir
 
-
-
-# =======================
-#    Sélection du fichier
-# =======================
-
-#ouvre la boîte de dialogue pour choisir un fichier
+# Ouvre une boîte de dialogue pour choisir le fichier texte réseau à analyser
 def choisir_fichier_reseau():
-    chemin_fichier = filedialog.askopenfilename(
+    return filedialog.askopenfilename(
         title="Sélectionner un fichier texte réseau",
         filetypes=[("Fichiers texte", "*.txt"), ("Tous les fichiers", "*.*")]
     )
-    return chemin_fichier
 
-#lit ce fichier et renvoie la liste de toutes les lignes.
+# Lit toutes les lignes du fichier réseau et renvoie une liste de chaînes
 def lire_fichier(chemin):
     with open(chemin, "r", encoding="utf-8") as f:
         return [l.rstrip("\n") for l in f]
 
+# Convertit une heure "HH:MM:SS.xxx" en secondes depuis minuit
+def parse_time(hhmmss):
+    h, m, s = hhmmss.split(":")
+    s = float(s)
+    return int(h) * 3600 + int(m) * 60 + s
+
+# Construit une clé (destination IP, port) pour un paquet
+def cle_destination(e):
+    return (e["dst_host"], str(e["dst_port"]))
 
 
-# =======================
-#    Parsing des lignes
-#      Le parsing est le processus qui consiste à analyser une suite de symboles (texte, code, données) pour en dégager la structure et en extraire des informations exploitables par une machine.
-# =======================
+# ============================================================
+# PARSING DES LIGNES TCPDUMP -> TABLEAU D'ÉVÉNEMENTS
+#   (En informatique, le parsing désigne le processus qui consiste à analyser une suite de symboles ou de données pour en dégager une structure et des éléments exploitables par un programme)
+# ============================================================
 
-#transformer chaque ligne brute de tcpdump en une ligne structurée.
+# Expression régulière pour extraire les champs importants d'une ligne tcpdump
 REG_IP = re.compile(
     r'^(?P<time>\d{2}:\d{2}:\d{2}\.\d+)\s+IP\s+'
     r'(?P<src>[\w\.-]+)\.(?P<src_port>[\w\d]+)\s*>\s*'
@@ -58,7 +58,7 @@ REG_IP = re.compile(
     r'length\s+(?P<length>\d+)'
 )
 
-#sépare un nom du type machine.test.443 en deux 
+# Sépare un nom de type "machine.port" en (machine, port)
 def split_host_port(nom):
     parts = nom.split(".")
     if len(parts) >= 2:
@@ -69,17 +69,15 @@ def split_host_port(nom):
         port = "vide"
     return host, port
 
-#essaie de matcher la ligne avec REG_IP puis construit un dictionnaire Python contenant les résultats 
+# Convertit une ligne brute tcpdump en dictionnaire structuré (ou None si non IP)
 def ligne_vers_dict(ligne):
     m = REG_IP.match(ligne)
     if not m:
         return None
     d = m.groupdict()
 
-    src_full = d["src"]
-    dst_full = d["dst"]
-    src_host, src_port2 = split_host_port(src_full)
-    dst_host, dst_port2 = split_host_port(dst_full)
+    src_host, src_port2 = split_host_port(d["src"])
+    dst_host, dst_port2 = split_host_port(d["dst"])
 
     return {
         "heure": d["time"],
@@ -91,7 +89,7 @@ def ligne_vers_dict(ligne):
         "length": int(d["length"]),
     }
 
-#applique ligne_vers_dict à toutes les lignes puis renvoie une liste de dictionnaires (mon tableau d’événements)
+# Transforme toutes les lignes brutes en tableau de dictionnaires d'événements
 def construire_tableau(lignes):
     table = []
     for l in lignes:
@@ -100,7 +98,7 @@ def construire_tableau(lignes):
             table.append(evt)
     return table
 
-#écrit ce tableau dans un fichier reseau_analyse.csv
+# Écrit le tableau d'événements dans un CSV séparé par des points-virgules
 def ecrire_csv(table, chemin_csv):
     if not table:
         return
@@ -111,42 +109,31 @@ def ecrire_csv(table, chemin_csv):
         for e in table:
             w.writerow(e)
 
-#calcule le nombre de packets et la somme total des octets (renvoie ces deux valeur dans un dictionnaire)
+# Calcule le nombre total de paquets et le volume total en octets
 def analyser_globale(table):
-    total = len(table)
-    total_octets = sum(e["length"] for e in table)
     return {
-        "nb_total": total,
-        "octets_total": total_octets,
+        "nb_total": len(table),
+        "octets_total": sum(e["length"] for e in table),
     }
 
 
+# ============================================================
+# STATISTIQUES GÉNÉRALES POUR LA SYNTHÈSE
+# ============================================================
 
-# =======================
-#    Calcul des statistiques pour les graphes
-#      Statistiques génériques
-# =======================
-
-#Regarde les top IP sources
+# Renvoie le top N des IP sources les plus présentes
 def stats_ip_sources(table, top_n=10):
-    c = Counter(e["src_host"] for e in table)
-    return c.most_common(top_n)
+    return Counter(e["src_host"] for e in table).most_common(top_n)
 
-#Regarde les top IP destinations
+# Renvoie le top N des IP destinations les plus présentes
 def stats_ip_destinations(table, top_n=10):
-    c = Counter(e["dst_host"] for e in table)
-    return c.most_common(top_n)
+    return Counter(e["dst_host"] for e in table).most_common(top_n)
 
-#Regarde les top ports de destination
-def stats_ports(table, top_n=10):
-    c = Counter(str(e["dst_port"]) for e in table)
-    return c.most_common(top_n)
-
-#liste toutes les longueurs de paquets.
+# Renvoie la liste des longueurs de paquets (en octets)
 def stats_longueurs(table):
     return [e["length"] for e in table]
 
-#compte approximatif des protocoles (DNS / SSH / HTTP / HTTPS / AUTRES) suivant le port.
+# Compte les paquets par protocole approximatif (DNS/SSH/HTTP/HTTPS/AUTRES)
 def stats_protocoles(table):
     counts = Counter()
     for e in table:
@@ -164,13 +151,11 @@ def stats_protocoles(table):
     return counts
 
 
+# ============================================================
+# STATISTIQUES SSH
+# ============================================================
 
-# =======================
-#    Calcul des statistiques pour les graphes
-#      SSH 
-# =======================
-
-#parcourt la liste de paquets et renvoie seulement ceux qui utilisent le port 22 (port ssh)
+# Filtre la table pour ne garder que les paquets SSH (port 22 ou service ssh)
 def filtrer_ssh(table):
     ssh_pkts = []
     for e in table:
@@ -179,7 +164,7 @@ def filtrer_ssh(table):
             ssh_pkts.append(e)
     return ssh_pkts
 
-#Cette fonction calcule des statistiques de trafic par session SSH (couple client ↔ serveur), en comptant les paquets et octets échangés côté client et côté serveur.
+# Regroupe les paquets SSH par (client, serveur) et compte paquets / octets
 def stats_ssh_sessions(table):
     sessions = defaultdict(lambda: {
         "pkts": 0,
@@ -202,7 +187,7 @@ def stats_ssh_sessions(table):
 
     return sessions
 
-#Ce programme compte combien de fois chaque flag TCP apparaît dans les paquets SSH et renvoie ces statistiques sous forme de compteur.
+# Compte la fréquence de chaque flag TCP dans les paquets SSH
 def stats_flags_ssh(table):
     ssh_pkts = filtrer_ssh(table)
     counts = Counter()
@@ -213,63 +198,16 @@ def stats_flags_ssh(table):
     return counts
 
 
+# ============================================================
+# STATISTIQUES SCAN / SYN
+# ============================================================
 
-# =======================
-#    Calcul des statistiques pour les graphes
-#      Scan de ports (SYN)
-# =======================
-
-#Cette fonction teste si un paquet est un SYN “pur” (début de connexion TCP) et non un SYN‑ACK.
+# Indique si un paquet est un SYN "pur" (S mais pas A)
 def est_syn(e):
     f = e["flags"]
-    return "S" in f and "A" not in f 
+    return "S" in f and "A" not in f
 
-#Cette fonction calcule, pour chaque IP source, combien de ports de destination différents elle a contactés avec des paquets SYN « purs », puis renvoie le top des IP les plus “scanneuses”.
-def stats_ports_distincts_par_source(table, top_n=10):
-    ports_par_src = defaultdict(set)
-    for e in table:
-        if est_syn(e):
-            ports_par_src[e["src_host"]].add(str(e["dst_port"]))
-    counts = [(src, len(ports)) for src, ports in ports_par_src.items()]
-    counts.sort(key=lambda x: x[1], reverse=True)
-    if not counts:
-        counts = [("Aucune IP", 0)]
-    return counts[:top_n]
-
-#Cette fonction calcule, pour chaque IP source, le taux de paquets SYN qui ne sont pas suivis d’ACK, puis renvoie le top des IP les plus suspectes
-def stats_syn_sans_ack_par_source(table, top_n=10):
-    syn_counts = Counter()
-    ack_counts = Counter()
-
-    for e in table:
-        src = e["src_host"]
-        f = e["flags"]
-        if "S" in f:
-            syn_counts[src] += 1
-        if "A" in f:
-            ack_counts[src] += 1
-
-    ratios = []
-    for src, nb_syn in syn_counts.items():
-        nb_ack = ack_counts.get(src, 0)
-        if nb_syn == 0:
-            ratio = 0.0
-        else:
-            ratio = max(nb_syn - nb_ack, 0) / nb_syn
-        ratios.append((src, ratio))
-
-    ratios.sort(key=lambda x: x[1], reverse=True)
-    if not ratios:
-        ratios = [("Aucune IP", 0.0)]
-    return ratios[:top_n]
-
-#Cette fonction convertit une heure au format "HH:MM:SS" en nombre de secondes écoulées depuis 00:00:00
-def parse_time(hhmmss):
-    h, m, s = hhmmss.split(":")
-    s = float(s)
-    return int(h) * 3600 + int(m) * 60 + s
-
-#Cette fonction calcule les intervalles de temps entre paquets SYN successifs pour les sources les plus actives, afin d’analyser le rythme des scans / connexions
+# Renvoie les intervalles temporels entre SYN successifs des sources les plus actives
 def stats_intervalles_syn_par_source(table, top_n_sources=3):
     syn_par_src = defaultdict(list)
     for e in table:
@@ -296,46 +234,11 @@ def stats_intervalles_syn_par_source(table, top_n_sources=3):
     return intervalles
 
 
+# ============================================================
+# STATISTIQUES CONNEXIONS INCOMPLÈTES / DDoS
+# ============================================================
 
-# =======================
-#    Calcul des statistiques pour les graphes
-#      Connexions incomplètes / DDoS
-# =======================
-
-def cle_destination(e):
-    return (e["dst_host"], str(e["dst_port"]))
-
-
-def stats_ratio_syn_synack_par_destination(table, top_n=10):
-    syn_counts = Counter()
-    synack_counts = Counter()
-
-    for e in table:
-        dst = cle_destination(e)
-        f = e["flags"]
-        if "S" in f and "A" not in f:
-            syn_counts[dst] += 1
-        if "S" in f and "A" in f:
-            synack_counts[dst] += 1
-
-    ratios = []
-    for dst, nb_syn in syn_counts.items():
-        nb_synack = synack_counts.get(dst, 0)
-        if nb_syn == 0:
-            ratio = 0.0
-        else:
-            ratio = max(nb_syn - nb_synack, 0) / nb_syn
-        ratios.append((dst, ratio))
-
-    ratios.sort(key=lambda x: x[1], reverse=True)
-    if not ratios:
-        ratios = [(("aucune_ip", "0"), 0.0)]
-
-    labels = [f"{ip}:{port}" for (ip, port), r in ratios[:top_n]]
-    values = [r for (dst, r) in ratios[:top_n]]
-    return labels, values
-
-
+# Calcule, par minute, le nombre de connexions incomplètes (SYN sans ACK) tous services confondus
 def stats_connexions_incompletes_par_minute(table):
     syn_par_dest_minute = Counter()
     ack_par_dest_minute = Counter()
@@ -368,7 +271,7 @@ def stats_connexions_incompletes_par_minute(table):
     valeurs = [par_minute[m] for m in minutes]
     return minutes, valeurs
 
-
+# Calcule, par service (IP:port destination), le nombre de connexions incomplètes
 def stats_connexions_incompletes_par_service(table, top_n=10):
     syn_par_dest = Counter()
     ack_par_dest = Counter()
@@ -396,60 +299,11 @@ def stats_connexions_incompletes_par_service(table, top_n=10):
     return labels, valeurs
 
 
+# ============================================================
+# GÉNÉRATION DES GRAPHIQUES (BAR, HISTO, PIE)
+# ============================================================
 
-# =======================
-#    Calcul des statistiques pour les graphes
-#      SQL suspectes 
-# =======================
-
-SQL_MOTIFS = ["union select", " or 1=1", " or '1'='1", ' or "1"="1']    
-
-
-def extraire_ip_source_depuis_ligne(ligne):
-    m = re.search(r"(\d{1,3}\.){3}\d{1,3}", ligne)
-    return m.group(0) if m else "inconnue"
-
-
-def extraire_hote_depuis_ligne(ligne):
-    m_host = re.search(r"[Hh]ost:\s*([^\s]+)", ligne)
-    if m_host:
-        return m_host.group(1)
-
-    m_ip = re.search(r">\s*([\w\.-]+)\.", ligne)
-    if m_ip:
-        return m_ip.group(1)
-
-    return "inconnu"
-
-
-def stats_sql_suspectes(lignes_brutes, top_n=10):
-    hote_counts = Counter()
-    src_counts = Counter()
-
-    for l in lignes_brutes:
-        l_low = l.lower()
-        if any(m in l_low for m in SQL_MOTIFS):
-            src_ip = extraire_ip_source_depuis_ligne(l)
-            hote = extraire_hote_depuis_ligne(l)
-            hote_counts[hote] += 1
-            src_counts[src_ip] += 1
-
-    top_hotes = hote_counts.most_common(top_n)
-    if not top_hotes:
-        top_hotes = [("aucun_hote", 0)]
-
-    top_src = src_counts.most_common(top_n)
-    if not top_src:
-        top_src = [("aucune_ip", 0)]
-
-    return top_hotes, top_src
-
-
-
-# =======================
-#    Génération des graphes
-# =======================
-
+# Crée un graphique en barres et le sauvegarde dans un fichier image
 def plot_bar(labels, values, title, xlabel, ylabel, path):
     plt.figure(figsize=(8, 4))
     plt.bar(range(len(labels)), values)
@@ -461,7 +315,7 @@ def plot_bar(labels, values, title, xlabel, ylabel, path):
     plt.savefig(path)
     plt.close()
 
-
+# Crée un histogramme et le sauvegarde dans un fichier image
 def plot_hist(data, title, xlabel, ylabel, path, bins=20):
     plt.figure(figsize=(8, 4))
     plt.hist(data, bins=bins)
@@ -472,7 +326,7 @@ def plot_hist(data, title, xlabel, ylabel, path, bins=20):
     plt.savefig(path)
     plt.close()
 
-
+# Crée un diagramme circulaire et le sauvegarde dans un fichier image
 def plot_pie(labels, values, title, path):
     plt.figure(figsize=(5, 5))
     if sum(values) == 0:
@@ -485,6 +339,11 @@ def plot_pie(labels, values, title, path):
     plt.close()
 
 
+# ============================================================
+# GRAPHIQUES DE SYNTHÈSE
+# ============================================================
+
+# Génère les graphes de synthèse (top IP, longueurs, protocoles, requêtes)
 def generer_graphiques_synthese(table, output_dir):
     top_src = stats_ip_sources(table)
     if not top_src:
@@ -509,15 +368,6 @@ def generer_graphiques_synthese(table, output_dir):
     plot_bar(labels_dst, values_dst,
              "Top IP destination", "IP destination", "Nombre de paquets", img_ip_dst)
 
-    top_ports = stats_ports(table)
-    if not top_ports:
-        top_ports = [("aucun", 0)]
-    labels_ports = [p for p, n in top_ports]
-    values_ports = [n for p, n in top_ports]
-    img_ports = os.path.join(output_dir, "ports_top10.png")
-    plot_bar(labels_ports, values_ports,
-             "10 ports les plus utilisés", "Port destination", "Nombre de paquets", img_ports)
-
     lengths = stats_longueurs(table)
     if not lengths:
         lengths = [0]
@@ -539,13 +389,17 @@ def generer_graphiques_synthese(table, output_dir):
     return {
         "img_ip_src": img_ip_src,
         "img_ip_dst": img_ip_dst,
-        "img_ports": img_ports,
         "img_lengths": img_lengths,
         "img_proto": img_proto,
         "img_requetes": img_requetes,
     }
 
 
+# ============================================================
+# GRAPHIQUES SSH
+# ============================================================
+
+# Génère les graphes d'activité SSH (volume par session + répartition des flags)
 def generer_graphiques_ssh(table, output_dir):
     sessions = stats_ssh_sessions(table)
     if not sessions:
@@ -557,14 +411,8 @@ def generer_graphiques_ssh(table, output_dir):
         }}
 
     labels_sess = [f"{src}->{dst}" for (src, dst) in sessions.keys()]
-    pkts_sess = [s["pkts"] for s in sessions.values()]
     bytes_client = [s["bytes_client"] for s in sessions.values()]
     bytes_server = [s["bytes_server"] for s in sessions.values()]
-
-    img_ssh_sessions = os.path.join(output_dir, "ssh_sessions_nb.png")
-    plot_bar(labels_sess, pkts_sess,
-             "Paquets par session SSH (approx.)",
-             "Session (client -> serveur)", "Nombre de paquets", img_ssh_sessions)
 
     img_ssh_volume = os.path.join(output_dir, "ssh_sessions_volume.png")
     plt.figure(figsize=(8, 4))
@@ -588,29 +436,17 @@ def generer_graphiques_ssh(table, output_dir):
              "Répartition des flags TCP (SSH)", img_ssh_flags)
 
     return {
-        "img_ssh_sessions": img_ssh_sessions,
         "img_ssh_volume": img_ssh_volume,
         "img_ssh_flags": img_ssh_flags,
     }
 
 
+# ============================================================
+# GRAPHIQUES SCAN / SYN
+# ============================================================
+
+# Génère le graphe des intervalles entre SYN successifs
 def generer_graphiques_scan(table, output_dir):
-    ports_distincts = stats_ports_distincts_par_source(table)
-    labels_ports_scan = [src for src, n in ports_distincts]
-    values_ports_scan = [n for src, n in ports_distincts]
-    img_scan_ports = os.path.join(output_dir, "scan_ports_distincts.png")
-    plot_bar(labels_ports_scan, values_ports_scan,
-             "Ports distincts contactés en SYN (par IP source)",
-             "IP source", "Nombre de ports distincts", img_scan_ports)
-
-    syn_ratios = stats_syn_sans_ack_par_source(table)
-    labels_syn_ratio = [src for src, r in syn_ratios]
-    values_syn_ratio = [r for src, r in syn_ratios]
-    img_scan_syn_ratio = os.path.join(output_dir, "scan_syn_sans_ack.png")
-    plot_bar(labels_syn_ratio, values_syn_ratio,
-             "Taux de SYN sans ACK (par IP source)",
-             "IP source", "Proportion de SYN sans ACK", img_scan_syn_ratio)
-
     intervalles = stats_intervalles_syn_par_source(table)
     img_scan_intervalles = os.path.join(output_dir, "scan_intervalles_syn.png")
     plot_hist(intervalles,
@@ -618,19 +454,16 @@ def generer_graphiques_scan(table, output_dir):
               "Intervalle (secondes)", "Nombre d'occurrences", img_scan_intervalles)
 
     return {
-        "img_scan_ports": img_scan_ports,
-        "img_scan_syn_ratio": img_scan_syn_ratio,
         "img_scan_intervalles": img_scan_intervalles,
     }
 
 
-def generer_graphiques_ddos(table, output_dir):
-    labels_ratio, valeurs_ratio = stats_ratio_syn_synack_par_destination(table)
-    img_ddos_ratio = os.path.join(output_dir, "ddos_ratio_syn_synack.png")
-    plot_bar(labels_ratio, valeurs_ratio,
-             "Ratio SYN / SYN-ACK par destination",
-             "Destination (IP:port)", "Proportion de SYN sans SYN-ACK", img_ddos_ratio)
+# ============================================================
+# GRAPHIQUES DDoS / CONNEXIONS INCOMPLÈTES
+# ============================================================
 
+# Génère les graphes liés aux connexions incomplètes (temps + service)
+def generer_graphiques_ddos(table, output_dir):
     minutes, valeurs_minute = stats_connexions_incompletes_par_minute(table)
     img_ddos_incomplets_temps = os.path.join(output_dir, "ddos_incomplets_par_minute.png")
     plt.figure(figsize=(8, 4))
@@ -649,41 +482,16 @@ def generer_graphiques_ddos(table, output_dir):
              "Destination (IP:port)", "Nombre de connexions incomplètes", img_ddos_incompletes_service)
 
     return {
-        "img_ddos_ratio": img_ddos_ratio,
         "img_ddos_incomplets_temps": img_ddos_incomplets_temps,
         "img_ddos_incompletes_service": img_ddos_incompletes_service,
     }
 
 
-def generer_graphiques_sql(lignes_brutes, output_dir):
-    top_hotes, top_src = stats_sql_suspectes(lignes_brutes)
+# ============================================================
+# INTERFACE GRAPHIQUE (GUI) ET ORCHESTRATION
+# ============================================================
 
-    labels_hotes = [h for h, n in top_hotes]
-    valeurs_hotes = [n for h, n in top_hotes]
-    img_sql_hotes = os.path.join(output_dir, "sql_hotes.png")
-    plot_bar(labels_hotes, valeurs_hotes,
-             "Top hôtes associés à des motifs SQL",
-             "Hôte / URL", "Nombre de requêtes suspectes", img_sql_hotes)
-
-    labels_src = [ip for ip, n in top_src]
-    valeurs_src = [n for ip, n in top_src]
-    img_sql_sources = os.path.join(output_dir, "sql_sources.png")
-    plot_bar(labels_src, valeurs_src,
-             "Requêtes SQL suspectes par IP source",
-             "IP source", "Nombre de requêtes suspectes", img_sql_sources)
-
-    return {
-        "img_sql_hotes": img_sql_hotes,
-        "img_sql_sources": img_sql_sources,
-    }
-
-
-
-# =======================
-#    Génération du rapport et GUI (Interface Graphique Utilisateur)
-# =======================
-
-#affiche dans la zone de texte Tkinter un petit rapport
+# Affiche un court résumé dans la zone de texte Tkinter après traitement
 def afficher_resultat(texte_resultat, chemin_csv, chemin_html, stats, output_dir):
     texte_resultat.config(state="normal")
     texte_resultat.delete("1.0", tk.END)
@@ -697,7 +505,7 @@ def afficher_resultat(texte_resultat, chemin_csv, chemin_html, stats, output_dir
     )
     texte_resultat.config(state="disabled")
 
-#prend un fichier de capture réseau choisi par l’utilisateur, lance toute l’analyse, génère les fichiers de sortie puis affiche et ouvre le rapport
+# Chaîne complète : choix fichier -> analyse -> graphes -> HTML -> affichage
 def traiter_fichier(texte_resultat):
     chemin = choisir_fichier_reseau()
     if not chemin:
@@ -711,7 +519,6 @@ def traiter_fichier(texte_resultat):
         return
 
     output_dir = get_output_dir()
-
     chemin_csv = os.path.join(output_dir, "reseau_analyse.csv")
     chemin_html = os.path.join(output_dir, "rapport_reseau.html")
 
@@ -722,7 +529,6 @@ def traiter_fichier(texte_resultat):
     imgs_ssh = generer_graphiques_ssh(table, output_dir)
     imgs_scan = generer_graphiques_scan(table, output_dir)
     imgs_ddos = generer_graphiques_ddos(table, output_dir)
-    imgs_sql = generer_graphiques_sql(lignes, output_dir)
 
     generer_html(
         table,
@@ -733,7 +539,6 @@ def traiter_fichier(texte_resultat):
         **imgs_ssh,
         **imgs_scan,
         **imgs_ddos,
-        **imgs_sql,
     )
 
     afficher_resultat(texte_resultat, chemin_csv, chemin_html, stats, output_dir)
@@ -741,10 +546,9 @@ def traiter_fichier(texte_resultat):
         "Terminé",
         f"Traitement terminé.\nTous les fichiers ont été générés dans :\n{output_dir}"
     )
-    # Ouvrir le rapport HTML dans le navigateur par défaut
     webbrowser.open_new_tab(chemin_html)
 
-# lance l’interface graphique Tkinter de l'outil d’analyse réseau : une petite fenêtre avec un bouton pour choisir un fichier de capture et un autre pour quitter.
+# Crée la fenêtre Tkinter principale avec les boutons et la zone de texte
 def main():
     global fenetre
     fenetre = tk.Tk()
@@ -767,6 +571,6 @@ def main():
 
     fenetre.mainloop()
 
-
+# Point d'entrée du script (lancement de la GUI)
 if __name__ == "__main__":
     main()

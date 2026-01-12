@@ -62,9 +62,6 @@
 <h3>Top IP destination</h3>
 <p><img alt="Top IP destination" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ip_destinations.png" /><br />
 <em>Montre quelles machines reçoivent le plus de trafic.</em></p>
-<h3>10 ports les plus utilisés</h3>
-<p><img alt="Ports les plus utilisés" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ports_top10.png" /><br />
-<em>Permet de voir les services les plus sollicités.</em></p>
 <h3>Distribution de la longueur des paquets</h3>
 <p><img alt="Longueur des paquets" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\longueurs_paquets.png" /><br />
 <em>Aide à distinguer petits paquets (scans) et flux volumineux.</em></p>
@@ -75,10 +72,6 @@
 <p><img alt="Répartition des protocoles" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\protocoles.png" /><br />
 <em>Indique si le trafic est conforme à l’usage prévu.</em></p>
 <h2>Activité SSH</h2>
-<h3>Sessions SSH approximées</h3>
-<p><img alt="Sessions SSH" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ssh_sessions_nb.png" /><br />
-<em>Nombre de paquets par couple client → serveur.</em>
-<em>Permet de voir si une session envoie beaucoup plus de paquets que les autres</em></p>
 <h3>Volume échangé par session SSH</h3>
 <p><img alt="Volume SSH par session" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ssh_sessions_volume.png" /><br />
 <em>Compare les octets client → serveur et serveur → client.</em>
@@ -87,19 +80,10 @@
 <p><img alt="Flags SSH" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ssh_flags.png" /><br />
 <em>Permet de repérer des terminaisons brutales ou anormales.</em></p>
 <h2>Scan de ports par IP source</h2>
-<h3>Ports distincts contactés en SYN</h3>
-<p><img alt="Ports distincts en SYN" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\scan_ports_distincts.png" /><br />
-<em>Une IP qui envoie des SYN vers beaucoup de ports ressemble fortement à un scan de ports ou à un outil de découverte de services.</em></p>
-<h3>Taux de SYN sans ACK</h3>
-<p><img alt="Taux de SYN sans ACK" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\scan_syn_sans_ack.png" /><br />
-<em>Un taux proche de 1 est typique de scans furtifs (envoie un SYN sur plein de ports, ne répond pas à l’ACK éventuel, et n’établit jamais de vraie connexion).</em></p>
 <h3>Intervalles entre SYN successifs</h3>
 <p><img alt="Intervalles entre SYN" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\scan_intervalles_syn.png" /><br />
 <em>Un rythme régulier rapide est typique d’un outil automatique.</em></p>
 <h2>Connexions incomplètes et risques de DDoS</h2>
-<h3>Ratio SYN / SYN‑ACK par destination</h3>
-<p><img alt="Ratio SYN / SYN-ACK" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ddos_ratio_syn_synack.png" /><br />
-<em>Un ratio élevé peut révéler un début de flood ou un serveur saturé qui ne répond plus correctement.</em></p>
 <h3>Connexions incomplètes par minute</h3>
 <p><img alt="Connexions incomplètes par minute" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ddos_incomplets_par_minute.png" /><br />
 <em>Permet de repérer des pics soudains.</em>
@@ -107,13 +91,6 @@
 <h3>Connexions incomplètes par service</h3>
 <p><img alt="Connexions incomplètes par service" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\ddos_incompletes_par_service.png" /><br />
 <em>Identifie les services les plus touchés.</em></p>
-<h2>Requêtes SQL suspectes</h2>
-<h3>Hôtes / URLs ciblés</h3>
-<p><img alt="Hôtes ciblés par SQL" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\sql_hotes.png" /><br />
-<em>Liste les hôtes apparaissant dans des motifs d’injection SQL.</em></p>
-<h3>Requêtes SQL suspectes par IP source</h3>
-<p><img alt="Sources SQL suspectes" src="c:\Users\stanf\SAE1.05\Traitement de donnée\Fichier renvoyé\sql_sources.png" /><br />
-<em>Révèle les machines à l’origine de requêtes suspectes.</em></p>
       </div>
     </div>
   </main>
